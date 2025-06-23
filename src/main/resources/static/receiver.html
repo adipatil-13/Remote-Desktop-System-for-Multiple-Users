@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Screen Receiver</title>
+</head>
+<body>
+<h2>Screen Receiver</h2>
+<img id="screen" width="640" height="360" />
+<div id="files">
+    <h3>Received Files:</h3>
+</div>
+
+<script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get("session") || "default";
+    const ws = new WebSocket("ws://localhost:8081/ws/screen?session=" + sessionId);
+    const img = document.getElementById("screen");
+    const filesDiv = document.getElementById("files");
+
+    ws.onmessage = (event) => {
+        const data = event.data;
+
+        if (typeof data === "string") {
+            if (data.startsWith("FILE:")) {
+                const parts = data.split(":");
+                const fileName = parts[1];
+                const base64Data = parts.slice(2).join(":"); // Handles ":" in filename
+
+                const link = document.createElement("a");
+                link.href = "data:application/octet-stream;base64," + base64Data;
+                link.download = fileName;
+                link.textContent = `📁 Download ${fileName}`;
+                link.style.display = "block";
+
+                filesDiv.appendChild(link);
+                console.log(`📥 Received file: ${fileName}`);
+            } else if (data.startsWith("data:image")) {
+                img.src = data;
+            } else {
+                console.warn("⚠️ Unknown format:", data.slice(0, 30));
+            }
+        }
+    };
+
+    ws.onclose = () => console.warn("❌ WebSocket closed");
+    ws.onerror = (err) => console.error("❌ WebSocket error", err);
+</script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Remote Desktop Viewer</title>
+    <style>
+        body {
+          margin: 0;
+          background: #000;
+        }
+        img {
+          display: block;
+          width: 100vw;
+          height: 100vh;
+          object-fit: contain;
+        }
+    </style>
+</head>
+<body>
+<img id="screen" src="" alt="Screen will appear here..." />
+
+<script>
+    const ws = new WebSocket("ws://localhost:8081/ws/screen");
+    const screen = document.getElementById("screen");
+
+    ws.onopen = () => {
+      console.log("📡 Connected to WebSocket server");
+    };
+
+    ws.onmessage = (event) => {
+      // Assuming sender is sending base64 image string
+      screen.src = event.data;
+    };
+
+    ws.onclose = () => {
+      console.log("🔌 WebSocket connection closed");
+    };
+
+    ws.onerror = (err) => {
+      console.error("❌ WebSocket error:", err);
+    };
+</script>
+</body>
+</html>

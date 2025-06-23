@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Screen Sender</title>
+</head>
+<body>
+<h2>Screen Sender</h2>
+<video id="screen" autoplay hidden></video>
+<input type="file" id="fileInput" />
+
+<script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get("session") || "default";
+    const ws = new WebSocket("ws://localhost:8081/ws/screen?session=" + sessionId);
+
+    const video = document.getElementById("screen");
+    const canvas = document.createElement("canvas");
+    canvas.width = 640;
+    canvas.height = 360;
+
+    ws.onopen = () => {
+        console.log("✅ WebSocket connected to session: " + sessionId);
+        navigator.mediaDevices.getDisplayMedia({ video: true }).then((stream) => {
+            video.srcObject = stream;
+            const ctx = canvas.getContext("2d");
+
+            setInterval(() => {
+                if (ws.readyState !== WebSocket.OPEN) return;
+
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const imageData = canvas.toDataURL("image/webp", 0.8); // Compress
+                ws.send(imageData);
+            }, 500);
+        }).catch((err) => {
+            console.error("❌ Failed to get screen:", err);
+        });
+    };
+
+    ws.onclose = () => console.warn("❌ WebSocket closed");
+
+    // FILE TRANSFER
+    const fileInput = document.getElementById("fileInput");
+    fileInput.addEventListener("change", () => {
+        const file = fileInput.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = () => {
+                const base64Data = reader.result.split(",")[1]; // Strip the prefix
+                const message = `FILE:${file.name}:${base64Data}`;
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(message);
+                    console.log("📁 File sent:", file.name);
+                } else {
+                    console.warn("WebSocket not open for file transfer");
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+</script>
+</body>
+</html>
