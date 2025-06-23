@@ -11,7 +11,7 @@
 <script>
     const urlParams = new URLSearchParams(window.location.search);
     const sessionId = urlParams.get("session") || "default";
-    const ws = new WebSocket("ws://localhost:8081/ws/screen?session=" + sessionId);
+    const ws = new WebSocket("wss://rds-multi.up.railway.app/ws/screen?session=" + sessionId);
 
     const video = document.getElementById("screen");
     const canvas = document.createElement("canvas");
