@@ -14,37 +14,71 @@
 <script>
     const urlParams = new URLSearchParams(window.location.search);
     const sessionId = urlParams.get("session") || "default";
-    const ws = new WebSocket("wss://rds-multi.up.railway.app/ws/screen?session=" + sessionId);
+    const ws = new WebSocket("ws://localhost:8081/ws/screen?session=" + sessionId);
     const img = document.getElementById("screen");
     const filesDiv = document.getElementById("files");
 
     ws.onmessage = (event) => {
         const data = event.data;
+        console.log("📨 Message received:", data.slice(0, 100));
 
         if (typeof data === "string") {
-            if (data.startsWith("FILE:")) {
-                const parts = data.split(":");
+            if (data.startsWith("FILE||")) {
+                const parts = data.split("||");
                 const fileName = parts[1];
-                const base64Data = parts.slice(2).join(":"); // Handles ":" in filename
+                const base64Data = parts.slice(2).join("||"); // handles || inside base64
+
+                const mimeType = getMimeType(fileName);
+                const blob = base64ToBlob(base64Data, mimeType);
+                const url = URL.createObjectURL(blob);
 
                 const link = document.createElement("a");
-                link.href = "data:application/octet-stream;base64," + base64Data;
+                link.href = url;
                 link.download = fileName;
-                link.textContent = `📁 Download ${fileName}`;
+                link.textContent = `Download ${fileName}`;
                 link.style.display = "block";
-
                 filesDiv.appendChild(link);
-                console.log(`📥 Received file: ${fileName}`);
-            } else if (data.startsWith("data:image")) {
+                return;
+            }
+
+            if (data.startsWith("data:image")) {
                 img.src = data;
             } else {
-                console.warn("⚠️ Unknown format:", data.slice(0, 30));
+                console.warn("Unknown message:", data.slice(0, 30));
             }
         }
     };
 
-    ws.onclose = () => console.warn("❌ WebSocket closed");
-    ws.onerror = (err) => console.error("❌ WebSocket error", err);
+    function getMimeType(fileName) {
+        const ext = fileName.split('.').pop().toLowerCase();
+        switch (ext) {
+            case "pdf": return "application/pdf";
+            case "docx": return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            case "txt": return "text/plain";
+            case "jpg":
+            case "jpeg": return "image/jpeg";
+            case "png": return "image/png";
+            case "webp": return "image/webp";
+            default: return "application/octet-stream";
+        }
+    }
+
+    function base64ToBlob(base64, mimeType) {
+        const byteChars = atob(base64);
+        const byteArrays = [];
+        for (let i = 0; i < byteChars.length; i += 512) {
+            const slice = byteChars.slice(i, i + 512);
+            const byteNumbers = new Array(slice.length);
+            for (let j = 0; j < slice.length; j++) {
+                byteNumbers[j] = slice.charCodeAt(j);
+            }
+            byteArrays.push(new Uint8Array(byteNumbers));
+        }
+        return new Blob(byteArrays, { type: mimeType });
+    }
+
+    ws.onclose = () => console.warn("WebSocket closed");
+    ws.onerror = (err) => console.error("WebSocket error", err);
 </script>
 </body>
 </html>
