@@ -14,7 +14,7 @@
 <script>
     const urlParams = new URLSearchParams(window.location.search);
     const sessionId = urlParams.get("session") || "default";
-    const ws = new WebSocket("ws://localhost:8081/ws/screen?session=" + sessionId);
+    const ws = new WebSocket("wss://noble-love.up.railway.app/ws/screen?session=" + sessionId);
     const img = document.getElementById("screen");
     const filesDiv = document.getElementById("files");
 
